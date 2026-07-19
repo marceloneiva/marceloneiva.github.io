@@ -957,16 +957,45 @@
       const dict = I18N[lang];
       if(dict && dict[key] !== undefined){ el.innerHTML = dict[key]; }
     });
-    root.lang = lang;
+    root.lang = lang === 'pt' ? 'pt-BR' : lang;
+    const ogLocale = document.querySelector('meta[property="og:locale"]');
+    if(ogLocale){ ogLocale.setAttribute('content', {pt:'pt_BR', en:'en_US', es:'es_ES'}[lang]); }
     document.querySelectorAll('.lang-btn').forEach(b=>{
       const on = b.dataset.lang === lang;
       b.classList.toggle('is-active', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
   }
+  const SUPPORTED = ['pt','en','es'];
+
+  // idioma pedido pela URL: ?lang=en  |  ?lang=es  |  #en  |  #es
+  function langFromUrl(){
+    const q = new URLSearchParams(location.search).get('lang');
+    if(q && SUPPORTED.includes(q.toLowerCase())) return q.toLowerCase();
+    const h = location.hash.replace('#','').toLowerCase();
+    if(SUPPORTED.includes(h)) return h;
+    return null;
+  }
+
   document.querySelectorAll('.lang-btn').forEach(b=>{
-    b.addEventListener('click', ()=> setLang(b.dataset.lang));
+    b.addEventListener('click', ()=>{
+      const lang = b.dataset.lang;
+      setLang(lang);
+      // reflete na URL para o link ser compartilhável — PT fica na URL limpa
+      const url = new URL(location.href);
+      if(lang === 'pt'){ url.searchParams.delete('lang'); }
+      else { url.searchParams.set('lang', lang); }
+      if(SUPPORTED.includes(url.hash.replace('#','').toLowerCase())){ url.hash = ''; }
+      history.replaceState(null, '', url);
+    });
   });
+
+  // botão voltar/avançar do navegador respeita o idioma da URL
+  window.addEventListener('popstate', ()=> setLang(langFromUrl() || 'pt'));
+
+  // aplica na carga — PT é o default quando a URL não pede nada
+  const initialLang = langFromUrl();
+  if(initialLang && initialLang !== 'pt'){ setLang(initialLang); }
 </script>
 
 </body>
